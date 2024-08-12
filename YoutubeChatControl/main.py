@@ -21,7 +21,7 @@ def video_id_al():
     video_id = simpledialog.askstring("Video ID", "Lütfen video ID'nizi girin:")
     return video_id
 
-chat = pytchat.create(video_id=video_id_al())
+global chat
 
 def yasakli_komutlar():
     config = configparser.ConfigParser()
