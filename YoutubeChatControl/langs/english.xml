@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dil>
+    <video_id_baslik>Video ID</video_id_baslik>
+    <video_id_mesaj>Please enter the video ID:</video_id_mesaj>
+    <video_id_yok>Video ID not found!</video_id_yok>
+    <sohbet_pencere_baslik>Chat</sohbet_pencere_baslik>
+    <komut_alindi>Command received: {komut}</komut_alindi>
+    <gecersiz_komut_format>Invalid command format!</gecersiz_komut_format>
+    <gecersiz_komut>Invalid command!</gecersiz_komut>
+    <sohbet_basladi>Chat started.</sohbet_basladi>
+    <sohbet_dur>Chat stopped.</sohbet_dur>
+    <kontrol_panel_baslik>Control Panel</kontrol_panel_baslik>
+    <sohbeti_baslat>Start Chat</sohbeti_baslat>
+    <sohbeti_durdur>Stop Chat</sohbeti_durdur>
+    <kontrol_paneli_ac>Open Control Panel</kontrol_paneli_ac>
+    <fare>mouse</fare>
+    <cmd>cmd</cmd>
+    <klavye>keyboard</klavye>
+    <url>url</url>
+    <sag>right</sag>
+    <sol>left</sol>
+    <yukari>up</yukari>
+    <asagi>down</asagi>
+    <tikla>click</tikla>
+    <dil_sec>Select Language</dil_sec>
+</dil>

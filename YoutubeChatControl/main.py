@@ -3,12 +3,13 @@ import pyautogui
 import os
 import configparser
 import tkinter as tk
-from tkinter import scrolledtext, simpledialog
+from tkinter import scrolledtext, simpledialog, ttk
 import threading
 import queue
 import webbrowser
+import xml.etree.ElementTree as ET
+import subprocess
 
-# renkler
 ARANLIK_TEMA = "#2E2E2E"
 AÇIK_TEMA = "#F0F0F0"
 YAZI_RENGI = "#FFFFFF"
@@ -16,12 +17,66 @@ DUGME_RENGI = "#007BFF"
 DUGME_RENGI_HOVER = "#0056b3"
 LOG_RENGI = "#00FF00"
 
+def dil_paketlerini_bul():
+    dil_paketleri = []
+    langs_klsr = 'langs'
+    for dosya in os.listdir(langs_klsr):
+        if dosya.endswith('.xml'):
+            dil_paketleri.append(dosya[:-4])
+    return dil_paketleri
+
+def dil_yukle(dil_adi):
+    dil_dosyasi = dil_adi + ".xml"
+    dil_yolu = os.path.join('langs', dil_dosyasi)
+
+    if not os.path.exists(dil_yolu):
+        print(f"Dil dosyası bulunamadı: {dil_yolu}")
+        return {}
+
+    tree = ET.parse(dil_yolu)
+    root = tree.getroot()
+
+    dil_dict = {}
+    for elem in root:
+        dil_dict[elem.tag] = elem.text
+
+    return dil_dict
+
+def dil_secimi_kaydet(dil_adi, pencere):
+    config = configparser.ConfigParser()
+    config.read('settings.ini')
+    config.set('Ayarlar', 'dil', dil_adi)
+
+    with open('settings.ini', 'w') as configfile:
+        config.write(configfile)
+
+    global dil
+    dil = dil_yukle(dil_adi)
+    print(f"Dil değiştirildi: {dil_adi}")
+    pencere.destroy()
+
+def dil_secimi_penceresi():
+    pencere = tk.Tk()
+    pencere.title("Dil Seçimi")
+
+    dil_paketleri = dil_paketlerini_bul()
+    dil_combo = ttk.Combobox(pencere, values=dil_paketleri)
+    dil_combo.set(config.get('Ayarlar', 'dil'))
+    dil_combo.pack(padx=10, pady=10)
+
+    dil_sec_btn = tk.Button(pencere, text="Dil Seç", command=lambda: dil_secimi_kaydet(dil_combo.get(), pencere))
+    dil_sec_btn.pack(padx=10, pady=10)
+
+    pencere.mainloop()
+
+config = configparser.ConfigParser()
+config.read('settings.ini')
+mevcut_dil = config.get('Ayarlar', 'dil')
+dil = dil_yukle(mevcut_dil)
 
 def video_id_al():
-    video_id = simpledialog.askstring("Video ID", "Lütfen video ID'nizi girin:")
+    video_id = simpledialog.askstring("VIDEO ID", dil["video_id_mesaj"])
     return video_id
-
-global chat
 
 def yasakli_komutlar():
     config = configparser.ConfigParser()
@@ -35,18 +90,18 @@ def komut_aktif_mi(komut):
 
 def fareyi_hareket_ettir(yon, mesafe=10):
     mevcut_x, mevcut_y = pyautogui.position()
-    if yon == "sağ":
+    if yon == dil["sag"]:
         pyautogui.moveTo(mevcut_x + mesafe, mevcut_y)
-    elif yon == "sol":
+    elif yon == dil["sol"]:
         pyautogui.moveTo(mevcut_x - mesafe, mevcut_y)
-    elif yon == "yukarı":
+    elif yon == dil["yukari"]:
         pyautogui.moveTo(mevcut_x, mevcut_y - mesafe)
-    elif yon == "aşağı":
+    elif yon == dil["asagi"]:
         pyautogui.moveTo(mevcut_x, mevcut_y + mesafe)
-    elif yon == "tıkla":
+    elif yon == dil["tikla"]:
         pyautogui.click()
     else:
-        log_ekle("Geçersiz yön! Yönler: sağ, sol, yukarı, aşağı, tıkla")
+        log_ekle(dil["gecersiz_komut"])
 
 def tarayıcı_oku(url):
     try:
@@ -65,26 +120,34 @@ def komut_izinli_mi(komut):
     return True
 
 def komut_isle(mesaj):
+    print(f"Gelen mesaj: {mesaj}")
     parcalar = mesaj.split()
-    if parcalar[0] == "!fare" and len(parcalar) >= 2 and komut_aktif_mi('fare'):
+    print(f"Komut parçaları: {parcalar}")
+
+    if parcalar[0] == "!mouse" and len(parcalar) >= 2 and komut_aktif_mi('fare'):
         yon = parcalar[1]
         mesafe = int(parcalar[2]) if len(parcalar) == 3 else 10
+        print(f"Fare hareketi: {yon} {mesafe}")
         fareyi_hareket_ettir(yon, mesafe)
     elif parcalar[0] == "!cmd" and len(parcalar) >= 2 and komut_aktif_mi('cmd'):
         komut = ' '.join(parcalar[1:])
+        print(f"Komut çalıştırma: {komut}")
         if komut_izinli_mi(komut):
             try:
-                os.system(komut)
+                subprocess.Popen(['cmd', '/c', komut], creationflags=subprocess.CREATE_NEW_CONSOLE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             except Exception as e:
                 print("Komut çalıştırılırken hata oluştu:", str(e))
-    elif parcalar[0] == "!klavye" and len(parcalar) >= 2 and komut_aktif_mi('klavye'):
+    elif parcalar[0] == "!keyboard" and len(parcalar) >= 2 and komut_aktif_mi('klavye'):
         metin = ' '.join(parcalar[1:])
+        print(f"Klavye yazısı: {metin}")
         yazi_yaz(metin)
     elif parcalar[0] == "!url" and len(parcalar) >= 2 and komut_aktif_mi('url'):
         url = parcalar[1]
+        print(f"URL açma: {url}")
         tarayıcı_oku(url)
     else:
-        print("Geçersiz komut formatı veya tanınmayan komut.")
+        print(dil["gecersiz_komut_format"])
+
 
 def log_ekle(mesaj):
     log_alani.insert(tk.END, mesaj + "\n")
@@ -93,13 +156,14 @@ def log_ekle(mesaj):
 
 def sohbeti_ayri_pencereye_goster():
     sohbet_pencere = tk.Toplevel()
-    sohbet_pencere.title("YouTube Sohbeti")
+    sohbet_pencere.title(dil["sohbet_pencere_baslik"])
     sohbet_pencere.attributes("-topmost", True)
     sohbet_pencere.config(bg=ARANLIK_TEMA)
 
+    global sohbet_alani
     sohbet_alani = scrolledtext.ScrolledText(sohbet_pencere, wrap=tk.WORD, width=50, height=30, bg=ARANLIK_TEMA, fg=YAZI_RENGI)
     sohbet_alani.grid(column=0, row=0, padx=10, pady=10)
-    
+
     return sohbet_pencere, sohbet_alani
 
 def chat_dinle(queue, chat):
@@ -108,7 +172,7 @@ def chat_dinle(queue, chat):
             mesaj = f"{c.author.name}: {c.message}"
             queue.put(mesaj)
             if c.message.startswith("!"):
-                queue.put(f"Komut alındı: {c.message}")
+                queue.put(dil["komut_alindi"].format(komut=c.message))
                 komut_isle(c.message)
 
 def queue_dinle(sohbet_alani, queue):
@@ -121,61 +185,46 @@ def queue_dinle(sohbet_alani, queue):
 def sohbet_baslat():
     video_id = video_id_al()
     if not video_id:
-        log_ekle("Video ID girilmedi. Sohbet başlatılamadı.")
+        log_ekle(dil["video_id_yok"])
         return
     
+    global chat
     chat = pytchat.create(video_id=video_id)
     q = queue.Queue()
     threading.Thread(target=chat_dinle, args=(q, chat), daemon=True).start()
     queue_dinle(sohbet_alani, q)
-    log_ekle("Sohbet dinlemeye başlandı.")
+    log_ekle(dil["sohbet_basladi"])
 
 def sohbet_durdur():
+    global chat
     chat.terminate()
-    log_ekle("Sohbet dinlemeyi durduruldu.")
+    log_ekle(dil["sohbet_dur"])
 
 def kontrol_paneli():
     panel_pencere = tk.Toplevel()
-    panel_pencere.title("Kontrol Paneli")
+    panel_pencere.title(dil["kontrol_panel_baslik"])
     panel_pencere.attributes("-topmost", True)
     panel_pencere.config(bg=ARANLIK_TEMA)
 
     baslik = tk.Label(panel_pencere, text="YoutubeChatControl", font=("Arial", 24), bg=ARANLIK_TEMA, fg=YAZI_RENGI)
     baslik.grid(column=0, row=0, padx=10, pady=10)
 
-    baslat_buton = tk.Button(panel_pencere, text="Sohbeti Başlat", command=sohbet_baslat, bg=DUGME_RENGI, fg=YAZI_RENGI)
+    baslat_buton = tk.Button(panel_pencere, text=dil["sohbeti_baslat"], command=sohbet_baslat, bg=DUGME_RENGI, fg=YAZI_RENGI)
     baslat_buton.grid(column=0, row=1, padx=10, pady=10)
-    baslat_buton.bind("<Enter>", lambda e: baslat_buton.config(bg=DUGME_RENGI_HOVER))
-    baslat_buton.bind("<Leave>", lambda e: baslat_buton.config(bg=DUGME_RENGI))
 
-    durdur_buton = tk.Button(panel_pencere, text="Sohbeti Durdur", command=sohbet_durdur, bg=DUGME_RENGI, fg=YAZI_RENGI)
+    durdur_buton = tk.Button(panel_pencere, text=dil["sohbeti_durdur"], command=sohbet_durdur, bg=DUGME_RENGI, fg=YAZI_RENGI)
     durdur_buton.grid(column=0, row=2, padx=10, pady=10)
-    durdur_buton.bind("<Enter>", lambda e: durdur_buton.config(bg=DUGME_RENGI_HOVER))
-    durdur_buton.bind("<Leave>", lambda e: durdur_buton.config(bg=DUGME_RENGI))
 
-    sparrow_yazi = tk.Label(panel_pencere, text="made by Sparrow", fg="blue", cursor="hand2", bg=ARANLIK_TEMA)
-    sparrow_yazi.grid(column=0, row=3, padx=10, pady=10)
-    sparrow_yazi.bind("<Button-1>", lambda e: webbrowser.open_new("https://www.youtube.com/channel/UCoxY4EKZIQQvqA477nBHyMA"))
-
-    return panel_pencere
-
-def gui_baslat():
-    pencere = tk.Tk()
-    pencere.title("YouTube Chat Komut Yöneticisi")
-    pencere.attributes("-topmost", True)
-    pencere.config(bg=ARANLIK_TEMA)
+    dil_sec_buton = tk.Button(panel_pencere, text=dil["dil_sec"], command=dil_secimi_penceresi, bg=DUGME_RENGI, fg=YAZI_RENGI)
+    dil_sec_buton.grid(column=0, row=3, padx=10, pady=10)
 
     global log_alani
-    log_alani = scrolledtext.ScrolledText(pencere, wrap=tk.WORD, width=50, height=30, bg=ARANLIK_TEMA, fg=YAZI_RENGI)
-    log_alani.grid(column=0, row=0, padx=10, pady=10, sticky='nsew')
+    log_alani = scrolledtext.ScrolledText(panel_pencere, wrap=tk.WORD, width=50, height=15, bg=ARANLIK_TEMA, fg=YAZI_RENGI)
+    log_alani.grid(column=0, row=4, padx=10, pady=10)
 
-    global sohbet_pencere, sohbet_alani
+    global sohbet_alani
     sohbet_pencere, sohbet_alani = sohbeti_ayri_pencereye_goster()
 
-    kontrol_paneli()
+    panel_pencere.mainloop()
 
-    pencere.mainloop()
-    sohbet_pencere.mainloop()
-
-if __name__ == "__main__":
-    gui_baslat()
+kontrol_paneli()
