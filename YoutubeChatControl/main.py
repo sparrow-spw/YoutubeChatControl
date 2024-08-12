@@ -3,7 +3,7 @@ import pyautogui
 import os
 import configparser
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, simpledialog
 import threading
 import queue
 import webbrowser
@@ -16,12 +16,12 @@ DUGME_RENGI = "#007BFF"
 DUGME_RENGI_HOVER = "#0056b3"
 LOG_RENGI = "#00FF00"
 
-def ayarlardan_video_id_al():
-    config = configparser.ConfigParser()
-    config.read('settings.ini', encoding='utf-8')
-    return config.get('YouTube', 'video_id')
 
-chat = pytchat.create(video_id=ayarlardan_video_id_al())
+def video_id_al():
+    video_id = simpledialog.askstring("Video ID", "Lütfen video ID'nizi girin:")
+    return video_id
+
+chat = pytchat.create(video_id=video_id_al())
 
 def yasakli_komutlar():
     config = configparser.ConfigParser()
@@ -30,7 +30,7 @@ def yasakli_komutlar():
 
 def komut_aktif_mi(komut):
     config = configparser.ConfigParser()
-    config.read('settings.ini', encoding='utf-8')
+    config.read('settings.ini')
     return config.getboolean('Komutlar', komut)
 
 def fareyi_hareket_ettir(yon, mesafe=10):
@@ -80,7 +80,7 @@ def komut_isle(mesaj):
     elif parcalar[0] == "!klavye" and len(parcalar) >= 2 and komut_aktif_mi('klavye'):
         metin = ' '.join(parcalar[1:])
         yazi_yaz(metin)
-    elif parcalar[0] == "!tarayıcı" and len(parcalar) >= 2 and komut_aktif_mi('tarayıcı'):
+    elif parcalar[0] == "!url" and len(parcalar) >= 2 and komut_aktif_mi('url'):
         url = parcalar[1]
         tarayıcı_oku(url)
     else:
@@ -102,7 +102,7 @@ def sohbeti_ayri_pencereye_goster():
     
     return sohbet_pencere, sohbet_alani
 
-def chat_dinle(queue):
+def chat_dinle(queue, chat):
     while chat.is_alive():
         for c in chat.get().sync_items():
             mesaj = f"{c.author.name}: {c.message}"
@@ -119,8 +119,14 @@ def queue_dinle(sohbet_alani, queue):
     sohbet_alani.after(100, queue_dinle, sohbet_alani, queue)
 
 def sohbet_baslat():
+    video_id = video_id_al()
+    if not video_id:
+        log_ekle("Video ID girilmedi. Sohbet başlatılamadı.")
+        return
+    
+    chat = pytchat.create(video_id=video_id)
     q = queue.Queue()
-    threading.Thread(target=chat_dinle, args=(q,), daemon=True).start()
+    threading.Thread(target=chat_dinle, args=(q, chat), daemon=True).start()
     queue_dinle(sohbet_alani, q)
     log_ekle("Sohbet dinlemeye başlandı.")
 
