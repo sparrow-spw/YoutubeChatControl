@@ -11,7 +11,7 @@ Youtube Chat now can control your computer!
 pip install -r requirements.txt
 ```
 
-### Run file.
+### Run File
 
 ```
 py __main__.py
