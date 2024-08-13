@@ -1,13 +1,39 @@
 # YoutubeChatControl
 Youtube Chat now can control your computer!
 
+**NOTE:** This project only supports Windows right now.
 
-**Commands:**
-!cmd (komutlar)
+## Installation
 
-!fare (sağ,sol,aşağı,yukarı) (mesafe)
+### Install Libraries
 
-!klavye (yazılar)
+```
+pip install -r requirements.txt
+```
 
+### Run File
 
-You need to change the VIDEO_ID from settings.ini
+```
+py __main__.py
+```
+
+## Commands
+`!cmd`: Run commands
+
+### cmd
+
+Run cmd commands.
+
+Example usage: `!cmd start`
+
+### fare
+
+Move mouse.
+
+Example usage: `!fare sağ|sol|aşağı|yukarı distance`
+
+### klavye
+
+Type anything from keyboard.
+
+Example usage: `!klavye test`
